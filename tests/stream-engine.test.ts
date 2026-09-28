@@ -735,4 +735,77 @@ describe("StreamEngine", () => {
       "complete",
     ]);
   });
+  test("hook failure does not interrupt the stream", async () => {
+    const engine = new StreamEngine(
+      new TestSource(),
+      {
+        hooks: {
+          onDelta: () => {
+            throw new Error("telemetry failed");
+          },
+        },
+      },
+    );
+
+    const session = new StreamSession(
+      "hook-failure",
+    );
+
+    const events = [];
+
+    for await (const event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      events.push(event);
+    }
+
+    expect(
+      events.map((event) => event.type),
+    ).toEqual([
+      "stream.start",
+      "stream.delta",
+      "stream.delta",
+      "stream.delta",
+      "stream.done",
+    ]);
+
+    expect(session.getState()).toBe(
+      STREAM_STATES.COMPLETED,
+    );
+  });
+
+  test("error hook failure does not replace the stream error", async () => {
+    const engine = new StreamEngine(
+      new FailingSource(),
+      {
+        hooks: {
+          onError: () => {
+            throw new Error("telemetry failed");
+          },
+        },
+      },
+    );
+
+    const session = new StreamSession(
+      "error-hook-failure",
+    );
+
+    const events = [];
+
+    for await (const event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      events.push(event);
+    }
+
+    expect(events.at(-1)).toMatchObject({
+      type: "stream.error",
+      code: "STREAM_EXECUTION_FAILED",
+      message: "provider failed",
+    });
+
+    expect(session.getState()).toBe(
+      STREAM_STATES.FAILED,
+    );
+  });
 });
