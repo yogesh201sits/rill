@@ -1,0 +1,190 @@
+import {
+  STREAM_EVENT_TYPES,
+  type StreamEvent
+} from "@rill/shared";
+
+import type { StreamInput } from "./stream-source";
+
+import { StreamBuffer } from "./stream-buffer";
+import type { StreamSource } from "./stream-source";
+import { StreamSession } from "./stream-session";
+
+type StreamEventPayload = {
+  [Type in StreamEvent["type"]]: Omit<
+    Extract<StreamEvent, { type: Type }>,
+    "streamId" | "sequence" | "timestamp"
+  >;
+}[StreamEvent["type"]];
+
+export interface StreamEngineOptions {
+  readonly now?: () => number;
+  readonly bufferCapacity?: number;
+}
+
+export class StreamEngine {
+  private readonly now: () => number;
+  private readonly bufferCapacity: number;
+
+  constructor(
+    private readonly source: StreamSource,
+    options: StreamEngineOptions = {},
+  ) {
+    this.now = options.now ?? Date.now;
+    this.bufferCapacity = options.bufferCapacity ?? 100;
+
+    if (this.bufferCapacity <= 0) {
+      throw new Error(
+        "Buffer capacity must be greater than 0",
+      );
+    }
+  }
+
+  async *stream(
+    session: StreamSession,
+    input: StreamInput,
+  ): AsyncIterable<StreamEvent> {
+    session.start();
+
+    yield this.createEvent(session, {
+      type: STREAM_EVENT_TYPES.START,
+    });
+
+    const buffer = new StreamBuffer<{
+      type: "delta";
+      text: string;
+    }>({
+      capacity: this.bufferCapacity,
+    });
+
+    const producer = this.produce(
+      session,
+      input,
+      buffer,
+    );
+
+    try {
+      while (true) {
+        const result = await buffer.next();
+
+        if (result.done) {
+          break;
+        }
+
+        yield this.createEvent(session, {
+          type: STREAM_EVENT_TYPES.DELTA,
+          text: result.value.text,
+        });
+      }
+
+      await producer;
+
+      if (session.signal.aborted) {
+        this.handleCancellation(session);
+
+        yield this.createEvent(session, {
+          type: STREAM_EVENT_TYPES.CANCELLED,
+          reason: "Stream was cancelled.",
+        });
+
+        return;
+      }
+
+      session.complete();
+
+      yield this.createEvent(session, {
+        type: STREAM_EVENT_TYPES.DONE,
+      });
+    } catch (error) {
+      this.handleError(session, error);
+
+      if (session.getState() === "cancelled") {
+        yield this.createEvent(session, {
+          type: STREAM_EVENT_TYPES.CANCELLED,
+          reason: "Stream was cancelled.",
+        });
+
+        return;
+      }
+
+      yield this.createEvent(session, {
+        type: STREAM_EVENT_TYPES.ERROR,
+        code: "STREAM_EXECUTION_FAILED",
+        message: this.getErrorMessage(error),
+        retryable: false,
+      });
+    }
+  }
+
+  private async produce(
+    session: StreamSession,
+    input: StreamInput,
+    buffer: StreamBuffer<{
+      type: "delta";
+      text: string;
+    }>,
+  ): Promise<void> {
+    try {
+      for await (const chunk of this.source.generate(
+        input,
+        session.signal,
+      )) {
+        if (session.signal.aborted) {
+          break;
+        }
+
+        await buffer.push({
+          type: "delta",
+          text: chunk.text,
+        });
+      }
+
+      if (!session.signal.aborted) {
+        buffer.complete();
+      }
+    } catch (error) {
+      buffer.fail(error);
+    }
+  }
+
+  private createEvent(
+    session: StreamSession,
+    event: StreamEventPayload,
+  ): StreamEvent {
+    return {
+      ...event,
+      streamId: session.id,
+      sequence: session.nextSequence(),
+      timestamp: this.now(),
+    } as StreamEvent;
+  }
+
+  private handleCancellation(
+    session: StreamSession,
+  ): void {
+    if (session.getState() !== "cancelled") {
+      session.cancel();
+    }
+  }
+
+  private handleError(
+    session: StreamSession,
+    error: unknown,
+  ): void {
+    if (session.signal.aborted) {
+      this.handleCancellation(session);
+      return;
+    }
+
+    if (session.getState() === "running") {
+      session.fail();
+    }
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return "Unknown stream execution error.";
+  }
+}
