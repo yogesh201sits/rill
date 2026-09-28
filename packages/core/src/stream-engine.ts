@@ -64,7 +64,9 @@ export class StreamEngine {
 
     try {
       while (true) {
-        const result = await buffer.next();
+        const result = await buffer.next(
+          session.signal,
+        );
 
         if (result.done) {
           break;
@@ -132,12 +134,14 @@ export class StreamEngine {
           break;
         }
 
-        await buffer.push({
-          type: "delta",
-          text: chunk.text,
-        });
+        await buffer.push(
+          {
+            type: "delta",
+            text: chunk.text,
+          },
+          session.signal,
+        );
       }
-
       if (!session.signal.aborted) {
         buffer.complete();
       }

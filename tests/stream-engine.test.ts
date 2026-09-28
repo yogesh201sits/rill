@@ -375,4 +375,135 @@ describe("StreamEngine", () => {
       "Buffer capacity must be greater than 0",
     );
   });
+  test("emits cancelled when the session is cancelled", async () => {
+    const source: StreamSource = {
+      async *generate(_input, signal) {
+        yield { text: "first" };
+
+        await new Promise<void>((resolve) => {
+          signal.addEventListener("abort", () => {
+            resolve();
+          });
+        });
+      },
+    };
+
+    const engine = new StreamEngine(source);
+
+    const session = new StreamSession(
+      "cancelled-stream",
+    );
+
+    const events = [];
+
+    for await (const event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      events.push(event);
+
+      if (event.type === "stream.delta") {
+        session.cancel();
+      }
+    }
+
+    expect(events.map((event) => event.type)).toEqual([
+      "stream.start",
+      "stream.delta",
+      "stream.cancelled",
+    ]);
+
+    expect(session.getState()).toBe(
+      STREAM_STATES.CANCELLED,
+    );
+  });
+
+  test("does not emit done after cancellation", async () => {
+    const source: StreamSource = {
+      async *generate(_input, signal) {
+        yield { text: "before-cancel" };
+
+        await new Promise<void>((resolve) => {
+          signal.addEventListener("abort", () => {
+            resolve();
+          });
+        });
+      },
+    };
+
+    const engine = new StreamEngine(source);
+
+    const session = new StreamSession(
+      "cancel-no-done",
+    );
+
+    const types: string[] = [];
+
+    for await (const event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      types.push(event.type);
+
+      if (event.type === "stream.delta") {
+        session.cancel();
+      }
+    }
+
+    expect(types).toEqual([
+      "stream.start",
+      "stream.delta",
+      "stream.cancelled",
+    ]);
+
+    expect(types).not.toContain(
+      "stream.done",
+    );
+  });
+
+  test("cancellation while producer is blocked does not hang", async () => {
+    const source: StreamSource = {
+      async *generate(_input, signal) {
+        yield { text: "A" };
+        yield { text: "B" };
+
+        await new Promise<void>((resolve) => {
+          signal.addEventListener("abort", () => {
+            resolve();
+          });
+        });
+      },
+    };
+
+    const engine = new StreamEngine(source, {
+      bufferCapacity: 1,
+    });
+
+    const session = new StreamSession(
+      "blocked-producer-cancel",
+    );
+
+    const events = [];
+
+    for await (const event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      events.push(event);
+
+      if (event.type === "stream.delta") {
+        session.cancel();
+        break;
+      }
+    }
+
+    expect(events[0]?.type).toBe(
+      "stream.start",
+    );
+
+    expect(events[1]?.type).toBe(
+      "stream.delta",
+    );
+
+    expect(session.getState()).toBe(
+      STREAM_STATES.CANCELLED,
+    );
+  });
 });
