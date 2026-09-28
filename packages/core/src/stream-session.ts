@@ -1,9 +1,6 @@
 import type { StreamId } from "@rill/shared";
 
-import {
-  STREAM_STATES,
-  type StreamState,
-} from "./stream-state";
+import { STREAM_STATES, type StreamState } from "./stream-state";
 
 export class StreamSession {
   readonly id: StreamId;
@@ -38,24 +35,15 @@ export class StreamSession {
   }
 
   start(): void {
-    this.transition(
-      STREAM_STATES.CREATED,
-      STREAM_STATES.RUNNING,
-    );
+    this.transition(STREAM_STATES.CREATED, STREAM_STATES.RUNNING);
   }
 
   complete(): void {
-    this.transition(
-      STREAM_STATES.RUNNING,
-      STREAM_STATES.COMPLETED,
-    );
+    this.transition(STREAM_STATES.RUNNING, STREAM_STATES.COMPLETED);
   }
 
   fail(): void {
-    this.transition(
-      STREAM_STATES.RUNNING,
-      STREAM_STATES.FAILED,
-    );
+    this.transition(STREAM_STATES.RUNNING, STREAM_STATES.FAILED);
   }
 
   cancel(): void {
@@ -70,21 +58,13 @@ export class StreamSession {
     this.state = STREAM_STATES.CANCELLED;
 
     this.controller.abort(
-      new DOMException(
-        "The stream was cancelled.",
-        "AbortError",
-      ),
+      new DOMException("The stream was cancelled.", "AbortError"),
     );
   }
 
-  private transition(
-    expected: StreamState,
-    next: StreamState,
-  ): void {
+  private transition(expected: StreamState, next: StreamState): void {
     if (this.state !== expected) {
-      throw new Error(
-        `Invalid stream transition: ${this.state} -> ${next}`,
-      );
+      throw new Error(`Invalid stream transition: ${this.state} -> ${next}`);
     }
 
     this.state = next;

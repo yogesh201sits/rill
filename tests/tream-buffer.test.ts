@@ -1,8 +1,4 @@
-import {
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import { StreamBuffer } from "../packages/core/src";
 
@@ -122,9 +118,7 @@ describe("StreamBuffer", () => {
 
     buffer.fail(error);
 
-    await expect(nextPromise).rejects.toThrow(
-      "producer failed",
-    );
+    await expect(nextPromise).rejects.toThrow("producer failed");
   });
 
   test("rejects push after completion", async () => {
@@ -143,9 +137,7 @@ describe("StreamBuffer", () => {
         new StreamBuffer({
           capacity: 0,
         }),
-    ).toThrow(
-      "Buffer capacity must be greater than 0",
-    );
+    ).toThrow("Buffer capacity must be greater than 0");
   });
   test("rejects a waiting consumer when signal is aborted", async () => {
     const buffer = new StreamBuffer<string>();
@@ -155,9 +147,7 @@ describe("StreamBuffer", () => {
 
     controller.abort();
 
-    await expect(nextPromise).rejects.toThrow(
-      "The operation was aborted.",
-    );
+    await expect(nextPromise).rejects.toThrow("The operation was aborted.");
 
     expect(buffer.size).toBe(0);
   });
@@ -171,16 +161,11 @@ describe("StreamBuffer", () => {
 
     await buffer.push("first");
 
-    const pushPromise = buffer.push(
-      "second",
-      controller.signal,
-    );
+    const pushPromise = buffer.push("second", controller.signal);
 
     controller.abort();
 
-    await expect(pushPromise).rejects.toThrow(
-      "The operation was aborted.",
-    );
+    await expect(pushPromise).rejects.toThrow("The operation was aborted.");
 
     expect(buffer.size).toBe(1);
 
@@ -196,9 +181,7 @@ describe("StreamBuffer", () => {
 
     controller.abort();
 
-    await expect(
-      buffer.next(controller.signal),
-    ).rejects.toThrow(
+    await expect(buffer.next(controller.signal)).rejects.toThrow(
       "The operation was aborted.",
     );
   });
@@ -209,9 +192,7 @@ describe("StreamBuffer", () => {
 
     controller.abort();
 
-    await expect(
-      buffer.push("value", controller.signal),
-    ).rejects.toThrow(
+    await expect(buffer.push("value", controller.signal)).rejects.toThrow(
       "The operation was aborted.",
     );
 

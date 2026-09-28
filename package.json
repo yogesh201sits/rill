@@ -12,6 +12,13 @@
     "@biomejs/biome": "^2.5.14",
     "@types/bun": "^1.4.2"
   },
+  "scripts": {
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "check": "biome check .",
+    "check:write": "biome check --write ."
+  },
   "peerDependencies": {
     "typescript": "^5"
   },

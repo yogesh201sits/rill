@@ -1,17 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  STREAM_STATES,
-  StreamSession,
-} from "../packages/core/src";
+import { STREAM_STATES, StreamSession } from "../packages/core/src";
 
 describe("StreamSession", () => {
   test("starts in CREATED state", () => {
     const session = new StreamSession("stream-1");
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.CREATED,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.CREATED);
   });
 
   test("transitions CREATED -> RUNNING", () => {
@@ -19,9 +14,7 @@ describe("StreamSession", () => {
 
     session.start();
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.RUNNING,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.RUNNING);
   });
 
   test("transitions RUNNING -> COMPLETED", () => {
@@ -30,9 +23,7 @@ describe("StreamSession", () => {
     session.start();
     session.complete();
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.COMPLETED,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.COMPLETED);
   });
 
   test("transitions RUNNING -> FAILED", () => {
@@ -41,9 +32,7 @@ describe("StreamSession", () => {
     session.start();
     session.fail();
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.FAILED,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.FAILED);
   });
 
   test("cancels a running stream", () => {
@@ -53,9 +42,7 @@ describe("StreamSession", () => {
 
     session.cancel();
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.CANCELLED,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.CANCELLED);
 
     expect(session.signal.aborted).toBe(true);
   });
@@ -68,17 +55,13 @@ describe("StreamSession", () => {
     session.cancel();
     session.cancel();
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.CANCELLED,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.CANCELLED);
   });
 
   test("rejects invalid state transition", () => {
     const session = new StreamSession("stream-1");
 
-    expect(() => session.complete()).toThrow(
-      "Invalid stream transition",
-    );
+    expect(() => session.complete()).toThrow("Invalid stream transition");
   });
 
   test("generates monotonically increasing sequence numbers", () => {
@@ -90,8 +73,6 @@ describe("StreamSession", () => {
   });
 
   test("rejects empty stream ID", () => {
-    expect(() => new StreamSession("")).toThrow(
-      "Stream ID must not be empty",
-    );
+    expect(() => new StreamSession("")).toThrow("Stream ID must not be empty");
   });
 });

@@ -1,7 +1,4 @@
-import {
-  STREAM_EVENT_TYPES,
-  type StreamEvent,
-} from "@rill/shared";
+import { STREAM_EVENT_TYPES, type StreamEvent } from "@rill/shared";
 
 import type { StreamInput } from "./stream-source";
 import type { StreamSource } from "./stream-source";
@@ -17,18 +14,14 @@ type StreamEventPayload = {
 }[StreamEvent["type"]];
 
 export interface StreamEngineHooks {
-  readonly onStart?: (
-    session: StreamSession,
-  ) => void | Promise<void>;
+  readonly onStart?: (session: StreamSession) => void | Promise<void>;
 
   readonly onDelta?: (
     session: StreamSession,
     text: string,
   ) => void | Promise<void>;
 
-  readonly onComplete?: (
-    session: StreamSession,
-  ) => void | Promise<void>;
+  readonly onComplete?: (session: StreamSession) => void | Promise<void>;
 
   readonly onError?: (
     session: StreamSession,
@@ -57,14 +50,11 @@ export class StreamEngine {
     options: StreamEngineOptions = {},
   ) {
     this.now = options.now ?? Date.now;
-    this.bufferCapacity =
-      options.bufferCapacity ?? 100;
+    this.bufferCapacity = options.bufferCapacity ?? 100;
     this.hooks = options.hooks ?? {};
 
     if (this.bufferCapacity <= 0) {
-      throw new Error(
-        "Buffer capacity must be greater than 0",
-      );
+      throw new Error("Buffer capacity must be greater than 0");
     }
   }
 
@@ -74,9 +64,7 @@ export class StreamEngine {
   ): AsyncIterable<StreamEvent> {
     session.start();
 
-    await this.runHook(() =>
-      this.hooks.onStart?.(session),
-    );
+    await this.runHook(() => this.hooks.onStart?.(session));
 
     yield this.createEvent(session, {
       type: STREAM_EVENT_TYPES.START,
@@ -89,17 +77,11 @@ export class StreamEngine {
       capacity: this.bufferCapacity,
     });
 
-    const producer = this.produce(
-      session,
-      input,
-      buffer,
-    );
+    const producer = this.produce(session, input, buffer);
 
     try {
       while (true) {
-        const result = await buffer.next(
-          session.signal,
-        );
+        const result = await buffer.next(session.signal);
 
         if (result.done) {
           break;
@@ -111,10 +93,7 @@ export class StreamEngine {
         });
 
         await this.runHook(() =>
-          this.hooks.onDelta?.(
-            session,
-            result.value.text,
-          ),
+          this.hooks.onDelta?.(session, result.value.text),
         );
 
         yield event;
@@ -127,12 +106,7 @@ export class StreamEngine {
 
         const reason = "Stream was cancelled.";
 
-        await this.runHook(() =>
-          this.hooks.onCancelled?.(
-            session,
-            reason,
-          ),
-        );
+        await this.runHook(() => this.hooks.onCancelled?.(session, reason));
 
         yield this.createEvent(session, {
           type: STREAM_EVENT_TYPES.CANCELLED,
@@ -144,9 +118,7 @@ export class StreamEngine {
 
       session.complete();
 
-      await this.runHook(() =>
-        this.hooks.onComplete?.(session),
-      );
+      await this.runHook(() => this.hooks.onComplete?.(session));
 
       yield this.createEvent(session, {
         type: STREAM_EVENT_TYPES.DONE,
@@ -157,12 +129,7 @@ export class StreamEngine {
       if (session.getState() === "cancelled") {
         const reason = "Stream was cancelled.";
 
-        await this.runHook(() =>
-          this.hooks.onCancelled?.(
-            session,
-            reason,
-          ),
-        );
+        await this.runHook(() => this.hooks.onCancelled?.(session, reason));
 
         yield this.createEvent(session, {
           type: STREAM_EVENT_TYPES.CANCELLED,
@@ -172,12 +139,7 @@ export class StreamEngine {
         return;
       }
 
-      await this.runHook(() =>
-        this.hooks.onError?.(
-          session,
-          error,
-        ),
-      );
+      await this.runHook(() => this.hooks.onError?.(session, error));
 
       yield this.createEvent(session, {
         type: STREAM_EVENT_TYPES.ERROR,
@@ -197,10 +159,7 @@ export class StreamEngine {
     }>,
   ): Promise<void> {
     try {
-      for await (const chunk of this.source.generate(
-        input,
-        session.signal,
-      )) {
+      for await (const chunk of this.source.generate(input, session.signal)) {
         if (session.signal.aborted) {
           break;
         }
@@ -223,9 +182,7 @@ export class StreamEngine {
   }
 
   private async runHook(
-    hook:
-      | (() => void | Promise<void>)
-      | undefined,
+    hook: (() => void | Promise<void>) | undefined,
   ): Promise<void> {
     if (!hook) {
       return;
@@ -250,18 +207,13 @@ export class StreamEngine {
     } as StreamEvent;
   }
 
-  private handleCancellation(
-    session: StreamSession,
-  ): void {
+  private handleCancellation(session: StreamSession): void {
     if (session.getState() !== "cancelled") {
       session.cancel();
     }
   }
 
-  private handleError(
-    session: StreamSession,
-    error: unknown,
-  ): void {
+  private handleError(session: StreamSession, error: unknown): void {
     if (session.signal.aborted) {
       this.handleCancellation(session);
       return;
