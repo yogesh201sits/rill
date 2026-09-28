@@ -506,4 +506,233 @@ describe("StreamEngine", () => {
       STREAM_STATES.CANCELLED,
     );
   });
+  test("calls onStart when stream starts", async () => {
+    let calledWith: StreamSession | undefined;
+
+    const engine = new StreamEngine(
+      new TestSource(),
+      {
+        hooks: {
+          onStart: (session) => {
+            calledWith = session;
+          },
+        },
+      },
+    );
+
+    const session = new StreamSession(
+      "hook-start",
+    );
+
+    for await (const _event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      // Consume stream.
+    }
+
+    expect(calledWith).toBe(session);
+  });
+  test("calls onDelta for every chunk", async () => {
+    const deltas: string[] = [];
+
+    const engine = new StreamEngine(
+      new TestSource(),
+      {
+        hooks: {
+          onDelta: (_session, text) => {
+            deltas.push(text);
+          },
+        },
+      },
+    );
+
+    const session = new StreamSession(
+      "hook-delta",
+    );
+
+    for await (const _event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      // Consume stream.
+    }
+
+    expect(deltas).toEqual([
+      "Hello",
+      " world",
+      "!",
+    ]);
+  });
+  test("calls onComplete when stream completes", async () => {
+    let completedSession:
+      | StreamSession
+      | undefined;
+
+    const engine = new StreamEngine(
+      new TestSource(),
+      {
+        hooks: {
+          onComplete: (session) => {
+            completedSession = session;
+          },
+        },
+      },
+    );
+
+    const session = new StreamSession(
+      "hook-complete",
+    );
+
+    for await (const _event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      // Consume stream.
+    }
+
+    expect(completedSession).toBe(session);
+    expect(session.getState()).toBe(
+      STREAM_STATES.COMPLETED,
+    );
+  });
+  test("calls onError when source fails", async () => {
+    let receivedError: unknown;
+    let receivedSession:
+      | StreamSession
+      | undefined;
+
+    const engine = new StreamEngine(
+      new FailingSource(),
+      {
+        hooks: {
+          onError: (session, error) => {
+            receivedSession = session;
+            receivedError = error;
+          },
+        },
+      },
+    );
+
+    const session = new StreamSession(
+      "hook-error",
+    );
+
+    for await (const _event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      // Consume stream.
+    }
+
+    expect(receivedSession).toBe(session);
+    expect(receivedError).toEqual(
+      new Error("provider failed"),
+    );
+
+    expect(session.getState()).toBe(
+      STREAM_STATES.FAILED,
+    );
+  });
+  test("calls onCancelled when stream is cancelled", async () => {
+    let cancelledSession:
+      | StreamSession
+      | undefined;
+
+    let cancellationReason:
+      | string
+      | undefined;
+
+    const source: StreamSource = {
+      async *generate(_input, signal) {
+        yield {
+          text: "first",
+        };
+
+        await new Promise<void>((resolve) => {
+          signal.addEventListener(
+            "abort",
+            () => resolve(),
+            { once: true },
+          );
+        });
+      },
+    };
+
+    const engine = new StreamEngine(
+      source,
+      {
+        hooks: {
+          onCancelled: (
+            session,
+            reason,
+          ) => {
+            cancelledSession = session;
+            cancellationReason = reason;
+          },
+        },
+      },
+    );
+
+    const session = new StreamSession(
+      "hook-cancelled",
+    );
+
+    for await (const event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      if (event.type === "stream.delta") {
+        session.cancel();
+      }
+    }
+
+    expect(cancelledSession).toBe(session);
+    expect(cancellationReason).toBe(
+      "Stream was cancelled.",
+    );
+
+    expect(session.getState()).toBe(
+      STREAM_STATES.CANCELLED,
+    );
+  });
+  test("calls lifecycle hooks in order", async () => {
+    const calls: string[] = [];
+
+    const source: StreamSource = {
+      async *generate() {
+        yield { text: "A" };
+        yield { text: "B" };
+      },
+    };
+
+    const engine = new StreamEngine(
+      source,
+      {
+        hooks: {
+          onStart: () => {
+            calls.push("start");
+          },
+          onDelta: (_session, text) => {
+            calls.push(`delta:${text}`);
+          },
+          onComplete: () => {
+            calls.push("complete");
+          },
+        },
+      },
+    );
+
+    const session = new StreamSession(
+      "hook-order",
+    );
+
+    for await (const _event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      // Consume stream.
+    }
+
+    expect(calls).toEqual([
+      "start",
+      "delta:A",
+      "delta:B",
+      "complete",
+    ]);
+  });
 });
