@@ -147,4 +147,74 @@ describe("StreamBuffer", () => {
       "Buffer capacity must be greater than 0",
     );
   });
+  test("rejects a waiting consumer when signal is aborted", async () => {
+    const buffer = new StreamBuffer<string>();
+    const controller = new AbortController();
+
+    const nextPromise = buffer.next(controller.signal);
+
+    controller.abort();
+
+    await expect(nextPromise).rejects.toThrow(
+      "The operation was aborted.",
+    );
+
+    expect(buffer.size).toBe(0);
+  });
+
+  test("rejects a waiting producer when signal is aborted", async () => {
+    const buffer = new StreamBuffer<string>({
+      capacity: 1,
+    });
+
+    const controller = new AbortController();
+
+    await buffer.push("first");
+
+    const pushPromise = buffer.push(
+      "second",
+      controller.signal,
+    );
+
+    controller.abort();
+
+    await expect(pushPromise).rejects.toThrow(
+      "The operation was aborted.",
+    );
+
+    expect(buffer.size).toBe(1);
+
+    expect(await buffer.next()).toEqual({
+      done: false,
+      value: "first",
+    });
+  });
+
+  test("immediately rejects next when signal is already aborted", async () => {
+    const buffer = new StreamBuffer<string>();
+    const controller = new AbortController();
+
+    controller.abort();
+
+    await expect(
+      buffer.next(controller.signal),
+    ).rejects.toThrow(
+      "The operation was aborted.",
+    );
+  });
+
+  test("immediately rejects push when signal is already aborted", async () => {
+    const buffer = new StreamBuffer<string>();
+    const controller = new AbortController();
+
+    controller.abort();
+
+    await expect(
+      buffer.push("value", controller.signal),
+    ).rejects.toThrow(
+      "The operation was aborted.",
+    );
+
+    expect(buffer.size).toBe(0);
+  });
 });
