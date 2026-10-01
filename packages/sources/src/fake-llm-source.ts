@@ -1,8 +1,4 @@
-import type {
-  StreamChunk,
-  StreamInput,
-  StreamSource,
-} from "@rill/core";
+import type { StreamChunk, StreamInput, StreamSource } from "@rill/core";
 
 export interface FakeLLMSourceOptions {
   readonly chunkDelayMs?: number;
@@ -14,8 +10,7 @@ export class FakeLLMSource implements StreamSource {
   private readonly chunkDelayMs: number;
 
   constructor(options: FakeLLMSourceOptions = {}) {
-    this.chunkDelayMs =
-      options.chunkDelayMs ?? DEFAULT_CHUNK_DELAY_MS;
+    this.chunkDelayMs = options.chunkDelayMs ?? DEFAULT_CHUNK_DELAY_MS;
 
     if (this.chunkDelayMs < 0) {
       throw new Error("chunkDelayMs must be >= 0");
@@ -42,8 +37,7 @@ export class FakeLLMSource implements StreamSource {
   }
 
   private createChunks(prompt: string): readonly string[] {
-    const response =
-      `This is a simulated response for: ${prompt}`;
+    const response = `This is a simulated response for: ${prompt}`;
 
     return response.split(/(\s+)/).filter(Boolean);
   }
@@ -63,10 +57,7 @@ export class FakeLLMSource implements StreamSource {
         clearTimeout(timer);
         reject(
           signal.reason ??
-            new DOMException(
-              "The stream was aborted.",
-              "AbortError",
-            ),
+            new DOMException("The stream was aborted.", "AbortError"),
         );
       };
 
@@ -86,10 +77,7 @@ export class FakeLLMSource implements StreamSource {
     if (signal.aborted) {
       throw (
         signal.reason ??
-        new DOMException(
-          "The stream was aborted.",
-          "AbortError",
-        )
+        new DOMException("The stream was aborted.", "AbortError")
       );
     }
   }

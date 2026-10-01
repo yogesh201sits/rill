@@ -8,8 +8,5 @@ export interface StreamChunk {
 }
 
 export interface StreamSource {
-  generate(
-    input: StreamInput,
-    signal: AbortSignal
-  ): AsyncIterable<StreamChunk>;
+  generate(input: StreamInput, signal: AbortSignal): AsyncIterable<StreamChunk>;
 }

@@ -1,8 +1,4 @@
-import {
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import type {
   StreamChunk,
@@ -24,10 +20,7 @@ class TestSource implements StreamSource {
     if (signal.aborted) {
       throw (
         signal.reason ??
-        new DOMException(
-          "The stream was aborted.",
-          "AbortError",
-        )
+        new DOMException("The stream was aborted.", "AbortError")
       );
     }
 
@@ -53,12 +46,9 @@ class EmptySource implements StreamSource {
 
 describe("StreamEngine", () => {
   test("emits start, delta, and done events", async () => {
-    const engine = new StreamEngine(
-      new TestSource(),
-      {
-        now: () => 1000,
-      },
-    );
+    const engine = new StreamEngine(new TestSource(), {
+      now: () => 1000,
+    });
 
     const session = new StreamSession("stream-1");
 
@@ -110,15 +100,11 @@ describe("StreamEngine", () => {
       timestamp: 1000,
     });
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.COMPLETED,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.COMPLETED);
   });
 
   test("maintains monotonically increasing sequence numbers", async () => {
-    const engine = new StreamEngine(
-      new TestSource(),
-    );
+    const engine = new StreamEngine(new TestSource());
 
     const session = new StreamSession("stream-2");
 
@@ -134,13 +120,9 @@ describe("StreamEngine", () => {
   });
 
   test("uses the session ID for every event", async () => {
-    const engine = new StreamEngine(
-      new TestSource(),
-    );
+    const engine = new StreamEngine(new TestSource());
 
-    const session = new StreamSession(
-      "stream-consistent-id",
-    );
+    const session = new StreamSession("stream-consistent-id");
 
     const events = [];
 
@@ -151,10 +133,7 @@ describe("StreamEngine", () => {
     }
 
     expect(
-      events.every(
-        (event) =>
-          event.streamId === "stream-consistent-id",
-      ),
+      events.every((event) => event.streamId === "stream-consistent-id"),
     ).toBe(true);
   });
 
@@ -193,9 +172,7 @@ describe("StreamEngine", () => {
   });
 
   test("emits done when source produces no chunks", async () => {
-    const engine = new StreamEngine(
-      new EmptySource(),
-    );
+    const engine = new StreamEngine(new EmptySource());
 
     const session = new StreamSession("empty-stream");
 
@@ -209,23 +186,15 @@ describe("StreamEngine", () => {
 
     expect(events).toHaveLength(2);
 
-    expect(events[0]?.type).toBe(
-      "stream.start",
-    );
+    expect(events[0]?.type).toBe("stream.start");
 
-    expect(events[1]?.type).toBe(
-      "stream.done",
-    );
+    expect(events[1]?.type).toBe("stream.done");
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.COMPLETED,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.COMPLETED);
   });
 
   test("emits error when source fails", async () => {
-    const engine = new StreamEngine(
-      new FailingSource(),
-    );
+    const engine = new StreamEngine(new FailingSource());
 
     const session = new StreamSession("failed-stream");
 
@@ -239,9 +208,7 @@ describe("StreamEngine", () => {
 
     expect(events).toHaveLength(3);
 
-    expect(events[0]?.type).toBe(
-      "stream.start",
-    );
+    expect(events[0]?.type).toBe("stream.start");
 
     expect(events[1]).toMatchObject({
       type: "stream.delta",
@@ -257,15 +224,11 @@ describe("StreamEngine", () => {
       retryable: false,
     });
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.FAILED,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.FAILED);
   });
 
   test("does not emit done after source failure", async () => {
-    const engine = new StreamEngine(
-      new FailingSource(),
-    );
+    const engine = new StreamEngine(new FailingSource());
 
     const session = new StreamSession("failed-stream");
 
@@ -277,26 +240,17 @@ describe("StreamEngine", () => {
       types.push(event.type);
     }
 
-    expect(types).toEqual([
-      "stream.start",
-      "stream.delta",
-      "stream.error",
-    ]);
+    expect(types).toEqual(["stream.start", "stream.delta", "stream.error"]);
 
-    expect(types).not.toContain(
-      "stream.done",
-    );
+    expect(types).not.toContain("stream.done");
   });
 
   test("uses the configured clock", async () => {
     let currentTime = 1000;
 
-    const engine = new StreamEngine(
-      new TestSource(),
-      {
-        now: () => currentTime,
-      },
-    );
+    const engine = new StreamEngine(new TestSource(), {
+      now: () => currentTime,
+    });
 
     const session = new StreamSession("clock-test");
 
@@ -309,13 +263,7 @@ describe("StreamEngine", () => {
       currentTime += 100;
     }
 
-    expect(timestamps).toEqual([
-      1000,
-      1100,
-      1200,
-      1300,
-      1400,
-    ]);
+    expect(timestamps).toEqual([1000, 1100, 1200, 1300, 1400]);
   });
 
   test("respects buffer capacity", async () => {
@@ -331,9 +279,7 @@ describe("StreamEngine", () => {
       bufferCapacity: 1,
     });
 
-    const session = new StreamSession(
-      "buffer-test",
-    );
+    const session = new StreamSession("buffer-test");
 
     const events = [];
 
@@ -345,24 +291,14 @@ describe("StreamEngine", () => {
 
     const deltas = events
       .filter(
-        (
-          event,
-        ): event is Extract<
-          typeof event,
-          { type: "stream.delta" }
-        > => event.type === "stream.delta",
+        (event): event is Extract<typeof event, { type: "stream.delta" }> =>
+          event.type === "stream.delta",
       )
       .map((event) => event.text);
 
-    expect(deltas).toEqual([
-      "A",
-      "B",
-      "C",
-    ]);
+    expect(deltas).toEqual(["A", "B", "C"]);
 
-    expect(events.at(-1)?.type).toBe(
-      "stream.done",
-    );
+    expect(events.at(-1)?.type).toBe("stream.done");
   });
 
   test("rejects invalid buffer capacity", () => {
@@ -371,9 +307,7 @@ describe("StreamEngine", () => {
         new StreamEngine(new TestSource(), {
           bufferCapacity: 0,
         }),
-    ).toThrow(
-      "Buffer capacity must be greater than 0",
-    );
+    ).toThrow("Buffer capacity must be greater than 0");
   });
   test("emits cancelled when the session is cancelled", async () => {
     const source: StreamSource = {
@@ -390,9 +324,7 @@ describe("StreamEngine", () => {
 
     const engine = new StreamEngine(source);
 
-    const session = new StreamSession(
-      "cancelled-stream",
-    );
+    const session = new StreamSession("cancelled-stream");
 
     const events = [];
 
@@ -412,9 +344,7 @@ describe("StreamEngine", () => {
       "stream.cancelled",
     ]);
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.CANCELLED,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.CANCELLED);
   });
 
   test("does not emit done after cancellation", async () => {
@@ -432,9 +362,7 @@ describe("StreamEngine", () => {
 
     const engine = new StreamEngine(source);
 
-    const session = new StreamSession(
-      "cancel-no-done",
-    );
+    const session = new StreamSession("cancel-no-done");
 
     const types: string[] = [];
 
@@ -448,15 +376,9 @@ describe("StreamEngine", () => {
       }
     }
 
-    expect(types).toEqual([
-      "stream.start",
-      "stream.delta",
-      "stream.cancelled",
-    ]);
+    expect(types).toEqual(["stream.start", "stream.delta", "stream.cancelled"]);
 
-    expect(types).not.toContain(
-      "stream.done",
-    );
+    expect(types).not.toContain("stream.done");
   });
 
   test("cancellation while producer is blocked does not hang", async () => {
@@ -477,9 +399,7 @@ describe("StreamEngine", () => {
       bufferCapacity: 1,
     });
 
-    const session = new StreamSession(
-      "blocked-producer-cancel",
-    );
+    const session = new StreamSession("blocked-producer-cancel");
 
     const events = [];
 
@@ -494,16 +414,232 @@ describe("StreamEngine", () => {
       }
     }
 
-    expect(events[0]?.type).toBe(
+    expect(events[0]?.type).toBe("stream.start");
+
+    expect(events[1]?.type).toBe("stream.delta");
+
+    expect(session.getState()).toBe(STREAM_STATES.CANCELLED);
+  });
+  test("calls onStart when stream starts", async () => {
+    let calledWith: StreamSession | undefined;
+
+    const engine = new StreamEngine(new TestSource(), {
+      hooks: {
+        onStart: (session) => {
+          calledWith = session;
+        },
+      },
+    });
+
+    const session = new StreamSession("hook-start");
+
+    for await (const _event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      // Consume stream.
+    }
+
+    expect(calledWith).toBe(session);
+  });
+  test("calls onDelta for every chunk", async () => {
+    const deltas: string[] = [];
+
+    const engine = new StreamEngine(new TestSource(), {
+      hooks: {
+        onDelta: (_session, text) => {
+          deltas.push(text);
+        },
+      },
+    });
+
+    const session = new StreamSession("hook-delta");
+
+    for await (const _event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      // Consume stream.
+    }
+
+    expect(deltas).toEqual(["Hello", " world", "!"]);
+  });
+  test("calls onComplete when stream completes", async () => {
+    let completedSession: StreamSession | undefined;
+
+    const engine = new StreamEngine(new TestSource(), {
+      hooks: {
+        onComplete: (session) => {
+          completedSession = session;
+        },
+      },
+    });
+
+    const session = new StreamSession("hook-complete");
+
+    for await (const _event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      // Consume stream.
+    }
+
+    expect(completedSession).toBe(session);
+    expect(session.getState()).toBe(STREAM_STATES.COMPLETED);
+  });
+  test("calls onError when source fails", async () => {
+    let receivedError: unknown;
+    let receivedSession: StreamSession | undefined;
+
+    const engine = new StreamEngine(new FailingSource(), {
+      hooks: {
+        onError: (session, error) => {
+          receivedSession = session;
+          receivedError = error;
+        },
+      },
+    });
+
+    const session = new StreamSession("hook-error");
+
+    for await (const _event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      // Consume stream.
+    }
+
+    expect(receivedSession).toBe(session);
+    expect(receivedError).toEqual(new Error("provider failed"));
+
+    expect(session.getState()).toBe(STREAM_STATES.FAILED);
+  });
+  test("calls onCancelled when stream is cancelled", async () => {
+    let cancelledSession: StreamSession | undefined;
+
+    let cancellationReason: string | undefined;
+
+    const source: StreamSource = {
+      async *generate(_input, signal) {
+        yield {
+          text: "first",
+        };
+
+        await new Promise<void>((resolve) => {
+          signal.addEventListener("abort", () => resolve(), { once: true });
+        });
+      },
+    };
+
+    const engine = new StreamEngine(source, {
+      hooks: {
+        onCancelled: (session, reason) => {
+          cancelledSession = session;
+          cancellationReason = reason;
+        },
+      },
+    });
+
+    const session = new StreamSession("hook-cancelled");
+
+    for await (const event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      if (event.type === "stream.delta") {
+        session.cancel();
+      }
+    }
+
+    expect(cancelledSession).toBe(session);
+    expect(cancellationReason).toBe("Stream was cancelled.");
+
+    expect(session.getState()).toBe(STREAM_STATES.CANCELLED);
+  });
+  test("calls lifecycle hooks in order", async () => {
+    const calls: string[] = [];
+
+    const source: StreamSource = {
+      async *generate() {
+        yield { text: "A" };
+        yield { text: "B" };
+      },
+    };
+
+    const engine = new StreamEngine(source, {
+      hooks: {
+        onStart: () => {
+          calls.push("start");
+        },
+        onDelta: (_session, text) => {
+          calls.push(`delta:${text}`);
+        },
+        onComplete: () => {
+          calls.push("complete");
+        },
+      },
+    });
+
+    const session = new StreamSession("hook-order");
+
+    for await (const _event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      // Consume stream.
+    }
+
+    expect(calls).toEqual(["start", "delta:A", "delta:B", "complete"]);
+  });
+  test("hook failure does not interrupt the stream", async () => {
+    const engine = new StreamEngine(new TestSource(), {
+      hooks: {
+        onDelta: () => {
+          throw new Error("telemetry failed");
+        },
+      },
+    });
+
+    const session = new StreamSession("hook-failure");
+
+    const events = [];
+
+    for await (const event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      events.push(event);
+    }
+
+    expect(events.map((event) => event.type)).toEqual([
       "stream.start",
-    );
-
-    expect(events[1]?.type).toBe(
       "stream.delta",
-    );
+      "stream.delta",
+      "stream.delta",
+      "stream.done",
+    ]);
 
-    expect(session.getState()).toBe(
-      STREAM_STATES.CANCELLED,
-    );
+    expect(session.getState()).toBe(STREAM_STATES.COMPLETED);
+  });
+
+  test("error hook failure does not replace the stream error", async () => {
+    const engine = new StreamEngine(new FailingSource(), {
+      hooks: {
+        onError: () => {
+          throw new Error("telemetry failed");
+        },
+      },
+    });
+
+    const session = new StreamSession("error-hook-failure");
+
+    const events = [];
+
+    for await (const event of engine.stream(session, {
+      prompt: "test",
+    })) {
+      events.push(event);
+    }
+
+    expect(events.at(-1)).toMatchObject({
+      type: "stream.error",
+      code: "STREAM_EXECUTION_FAILED",
+      message: "provider failed",
+    });
+
+    expect(session.getState()).toBe(STREAM_STATES.FAILED);
   });
 });
