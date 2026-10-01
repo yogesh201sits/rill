@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import type { StreamDeltaEvent } from "@rill/shared";
+import type { StreamDeltaEvent } from "../packages/shared/src";
 
-import { SSEEncoder } from "./sse-encoder";
+import { SSEEncoder } from "../packages/transports/src/sse/sse-encoder";
 
 describe("SSEEncoder", () => {
   test("encodes a stream event into SSE format", () => {

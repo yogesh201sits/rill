@@ -51,6 +51,7 @@
       "name": "@rill/transports",
       "version": "0.1.0",
       "dependencies": {
+        "@rill/core": "workspace:*",
         "@rill/shared": "workspace:*",
       },
       "devDependencies": {

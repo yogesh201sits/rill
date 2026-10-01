@@ -11,7 +11,8 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@rill/shared": "workspace:*"
+    "@rill/shared": "workspace:*",
+    "@rill/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
