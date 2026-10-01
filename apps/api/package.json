@@ -1,18 +1,21 @@
 {
-  "name": "@rill/transports",
+  "name": "@rill/api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": "./src/sse/index.ts"
-  },
   "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
   "dependencies": {
+    "@rill/core": "workspace:*",
     "@rill/shared": "workspace:*",
-    "@rill/core": "workspace:*"
+    "@rill/sources": "workspace:*",
+    "@rill/transports": "workspace:*",
+    "hono": "^4.13.12",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
