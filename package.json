@@ -4,9 +4,11 @@
   "type": "module",
   "private": true,
   "workspaces": [
+    "apps/*",
     "packages/core",
     "packages/shared",
-    "packages/sources"
+    "packages/sources",
+    "packages/transports"
   ],
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",

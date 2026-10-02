@@ -5,12 +5,12 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "types": ["bun"],
     "exactOptionalPropertyTypes": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["bun"]
   },
-  "include": ["src/**/*.ts", "../../tests/sse-encoder.test.ts"]
+  "include": ["server.ts", "routes/**/*.ts"]
 }
