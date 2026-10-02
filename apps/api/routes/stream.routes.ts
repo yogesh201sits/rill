@@ -12,7 +12,9 @@ import { SSETransport } from "@rill/transports";
 
 const streamRequestSchema = z.object({
   prompt: z.string().min(1),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z
+    .record(z.string(), z.unknown())
+    .optional(),
 });
 
 const source = new FakeLLMSource({
@@ -53,5 +55,11 @@ streamRoutes.post("/v1/stream", async (c) => {
       : {}),
   });
 
-  return transport.createResponse(events);
+  return transport.createResponse({
+    events,
+    signal: c.req.raw.signal,
+    onDisconnect: () => {
+      session.cancel();
+    },
+  });
 });
